@@ -14,6 +14,7 @@ import team009.robot.Tower;
 
 public class RobotPlayer {
 	public static void run(RobotController rc) throws GameActionException {
+	    rc.setIndicatorString(0, "Init");
 	    RobotType type = rc.getType();
         if (type == RobotType.ARCHON) {
             RobotPlayer.move(new Archon(rc), rc);
@@ -33,6 +34,7 @@ public class RobotPlayer {
     private static void move(Manager m, RobotController rc) {
         while(true) {
             try {
+                m.update(rc);
                 m.move(rc);
             } catch (Exception e) {
                 e.printStackTrace();

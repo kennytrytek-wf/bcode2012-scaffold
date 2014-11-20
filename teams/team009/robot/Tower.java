@@ -19,4 +19,7 @@ public class Tower extends Manager {
         if (rc.isMovementActive()) {
         }
     }
+
+    public void update(RobotController rc) throws GameActionException {
+    }
 }
