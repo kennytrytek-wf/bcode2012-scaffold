@@ -22,22 +22,31 @@ public class Move {
     }
 
     public static boolean moveTo(RobotController rc, MapLocation myLoc, MapLocation destination, Direction origDir) throws GameActionException {
+        if (Info.distance(myLoc, destination) <= 2) {
+            return true;
+        }
         Direction desiredDir = myLoc.directionTo(destination);
         if (Move.canMove(rc, desiredDir) && (desiredDir == origDir)) {
             rc.moveForward();
             return true;
         }
-        Direction newDir = desiredDir.rotateRight();
-        while (!Move.canMove(rc, newDir) && !(newDir == desiredDir)) {
-            newDir = newDir.rotateRight();
-        }
-        if (Move.canMove(rc, newDir)) {
-            if (newDir == origDir) {
-                rc.moveForward();
-            } else {
-                Move.setDirection(rc, newDir);
+        Direction[] dirOptions = {
+            desiredDir,
+            desiredDir.rotateRight(),
+            desiredDir.rotateLeft(),
+            desiredDir.rotateRight().rotateRight(),
+            desiredDir.rotateLeft().rotateLeft()
+        };
+        for (int i=0; i < dirOptions.length; i++) {
+            Direction newDir = dirOptions[i];
+            if (Move.canMove(rc, newDir)) {
+                if (newDir == origDir) {
+                    rc.moveForward();
+                } else {
+                    Move.setDirection(rc, newDir);
+                }
+                return true;
             }
-            return true;
         }
         return false;
     }

@@ -30,7 +30,7 @@ public class Info {
         this.round += 1;
     }
 
-    public int distance(MapLocation start, MapLocation end) {
+    public static int distance(MapLocation start, MapLocation end) {
         int x1 = start.x;
         int x2 = end.x;
         int y1 = start.y;
@@ -42,7 +42,7 @@ public class Info {
         int minDistance = 999999;
         MapLocation minLoc = null;
         for (int i=0; i < locs.length; i++) {
-            int distance = this.distance(myLoc, locs[i]);
+            int distance = Info.distance(myLoc, locs[i]);
             if (distance < minDistance) {
                 minDistance = distance;
                 minLoc = locs[i];

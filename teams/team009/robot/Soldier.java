@@ -1,12 +1,15 @@
 package team009.robot;
 
+import java.util.ArrayList;
 import java.util.Random;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.GameObject;
 import battlecode.common.MapLocation;
+import battlecode.common.Robot;
 import battlecode.common.RobotController;
+import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
 
 import team009.interfaces.Manager;
@@ -28,7 +31,6 @@ public class Soldier extends Manager {
     }
 
     public void update(RobotController rc) throws GameActionException {
-        rc.setIndicatorString(0, "Updating...");
         this.info.update(rc);
         this.myDir = rc.getDirection();
         this.myLoc = rc.getLocation();
@@ -36,20 +38,60 @@ public class Soldier extends Manager {
     }
 
     public void move(RobotController rc) throws GameActionException {
-        rc.setIndicatorString(0, "move");
-        if (rc.isMovementActive()) {
-            rc.setIndicatorString(0, "Can't move.");
+        if (rc.isMovementActive() || rc.isAttackActive()) {
+            return;
+        }
+        if (this.attack(rc)) {
+            return;
+        }
+        if (rc.getFlux() < rc.getType().moveCost * 10.0) {
+            return;
+        }
+        if (this.moveHome(rc)) {
             return;
         }
         if (this.moveToCapturePoint(rc)) {
-            rc.setIndicatorString(0, "Moving...");
             return;
         }
-        rc.setIndicatorString(0, "Failed to do anything.");
     }
 
     private boolean moveToCapturePoint(RobotController rc) throws GameActionException {
         MapLocation nearest = this.info.getClosest(this.myLoc, this.info.allNodes);
         return Move.moveTo(rc, this.myLoc, nearest, this.myDir);
+    }
+
+    private boolean moveHome(RobotController rc) throws GameActionException {
+        return Move.moveTo(rc, this.myLoc, this.info.myCore, this.myDir);
+    }
+
+    private boolean attack(RobotController rc) throws GameActionException {
+        if (rc.getFlux() < 10) {
+            return false;
+        }
+        Robot[] robotsAround = rc.senseNearbyGameObjects(Robot.class);
+        int minDistance = 999999;
+        MapLocation minLoc = null;
+        RobotLevel minLevel = null;
+        for (int i=0; i < robotsAround.length; i++) {
+            Robot r = robotsAround[i];
+            if (r.getTeam() != this.info.myTeam) {
+                MapLocation rLoc = rc.senseLocationOf(r);
+                int rDist = Info.distance(this.myLoc, rLoc);
+                if (rDist < minDistance) {
+                    minDistance = rDist;
+                    minLoc = rLoc;
+                    minLevel = r.getRobotLevel();
+                }
+            }
+        }
+        if (minLoc == null) {
+            return false;
+        }
+        if (rc.canAttackSquare(minLoc)) {
+            rc.attackSquare(minLoc, minLevel);
+        } else {
+            Move.moveTo(rc, this.myLoc, minLoc, this.myDir);
+        }
+        return true;
     }
 }

@@ -45,6 +45,12 @@ public class Archon extends Manager {
         if (this.spawn(rc)) {
             return;
         }
+        if (rc.getFlux() < rc.getType().moveCost * 10.0) {
+            return;
+        }
+        if (this.moveHome(rc)) {
+            return;
+        }
         if (this.moveToCapturePoint(rc)) {
             return;
         }
@@ -55,8 +61,11 @@ public class Archon extends Manager {
         Robot[] robotsAround = rc.senseNearbyGameObjects(Robot.class);
         for (int i=0; i < robotsAround.length; i++) {
             Robot r = robotsAround[i];
+            if (r.getTeam() != this.info.myTeam) {
+                continue;
+            }
             MapLocation rLoc = rc.senseLocationOf(r);
-            if (this.info.distance(this.myLoc, rLoc) != 1) {
+            if (Info.distance(this.myLoc, rLoc) != 1) {
                 continue;
             }
             RobotInfo rInfo = rc.senseRobotInfo(r);
@@ -68,7 +77,7 @@ public class Archon extends Manager {
                 if (totalFlux < 20) {
                     return false;
                 }
-                rc.transferFlux(rLoc, this.info.getLevel(rInfo.type), 20.0);
+                rc.transferFlux(rLoc, r.getRobotLevel(), 20.0);
                 totalFlux -= 20;
             }
         }
@@ -91,6 +100,10 @@ public class Archon extends Manager {
             }
         }
         return null;
+    }
+
+    private boolean moveHome(RobotController rc) throws GameActionException {
+        return Move.moveTo(rc, this.myLoc, this.info.myCore, this.myDir);
     }
 
     private boolean moveToCapturePoint(RobotController rc) throws GameActionException {
