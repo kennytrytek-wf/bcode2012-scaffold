@@ -20,12 +20,14 @@ public class Archon extends Manager {
     Direction myDir;
     MapLocation myLoc;
     MapLocation nextLoc;
+    MapLocation capPoint;
 
     public Archon(RobotController rc) throws GameActionException {
         this.info = new Info(rc);
         this.myDir = null;
         this.myLoc = null;
         this.nextLoc = null;
+        this.capPoint = null;
     }
 
     public void update(RobotController rc) throws GameActionException {
@@ -33,10 +35,14 @@ public class Archon extends Manager {
         this.myDir = rc.getDirection();
         this.myLoc = rc.getLocation();
         this.nextLoc = this.myLoc.add(this.myDir);
+        this.capPoint = this.getCapturePoint(rc);
     }
 
     public void move(RobotController rc) throws GameActionException {
         if (rc.isMovementActive()) {
+            return;
+        }
+        if (this.capture(rc)) {
             return;
         }
         if (!transferFlux(rc)) {
@@ -48,12 +54,16 @@ public class Archon extends Manager {
         if (rc.getFlux() < rc.getType().moveCost * 10.0) {
             return;
         }
-        if (this.moveHome(rc)) {
-            return;
-        }
         if (this.moveToCapturePoint(rc)) {
             return;
         }
+        if (this.moveHome(rc)) {
+            return;
+        }
+    }
+
+    private MapLocation getCapturePoint(RobotController rc) throws GameActionException {
+        return this.info.getClosest(this.myLoc, this.info.allNodes);
     }
 
     private boolean transferFlux(RobotController rc) throws GameActionException {
@@ -85,10 +95,15 @@ public class Archon extends Manager {
     }
 
     private boolean spawn(RobotController rc) throws GameActionException {
-        RobotType spawnMe = this.getSpawnType(rc);
-        if (spawnMe != null) {
-            rc.spawn(spawnMe);
-            return true;
+        return this.spawn(rc, RobotType.SOLDIER);
+    }
+
+    private boolean spawn(RobotController rc, RobotType type) throws GameActionException {
+        if (rc.getFlux() > type.spawnCost) {
+            if (Move.canMove(rc, this.myDir)) {
+                rc.spawn(type);
+                return true;
+            }
         }
         return false;
     }
@@ -109,5 +124,18 @@ public class Archon extends Manager {
     private boolean moveToCapturePoint(RobotController rc) throws GameActionException {
         MapLocation nearest = this.info.getClosest(this.myLoc, this.info.allNodes);
         return Move.moveTo(rc, this.myLoc, nearest, this.myDir);
+    }
+
+    private boolean capture(RobotController rc) throws GameActionException {
+        if (this.info.distance(this.myLoc, this.capPoint) == 1) {
+            Direction toCapPoint = this.myLoc.directionTo(this.capPoint);
+            if (this.myDir == toCapPoint) {
+                this.spawn(rc, RobotType.TOWER);
+            } else {
+                Move.setDirection(rc, toCapPoint);
+            }
+            return true;
+        }
+        return Move.moveTo(rc, this.myLoc, this.capPoint, this.myDir);
     }
 }

@@ -22,7 +22,11 @@ public class Move {
     }
 
     public static boolean moveTo(RobotController rc, MapLocation myLoc, MapLocation destination, Direction origDir) throws GameActionException {
-        if (Info.distance(myLoc, destination) <= 2) {
+        return Move.moveTo(rc, myLoc, destination, origDir, 1);
+    }
+
+    public static boolean moveTo(RobotController rc, MapLocation myLoc, MapLocation destination, Direction origDir, int minDistance) throws GameActionException {
+        if (Info.distance(myLoc, destination) <= minDistance) {
             return true;
         }
         Direction desiredDir = myLoc.directionTo(destination);

@@ -1,10 +1,14 @@
 package team009.tools;
 
+import java.lang.Class;
+
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
+import battlecode.common.Robot;
 import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
 import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
 import battlecode.common.Team;
@@ -28,6 +32,7 @@ public class Info {
 
     public void update(RobotController rc) {
         this.round += 1;
+        this.allNodes = rc.senseCapturablePowerNodes();
     }
 
     public static int distance(MapLocation start, MapLocation end) {
@@ -51,12 +56,24 @@ public class Info {
         return minLoc;
     }
 
-    public RobotLevel getLevel(RobotType r) {
-        if (r == RobotType.SCOUT) {
-            return RobotLevel.IN_AIR;
-        } else if (r == RobotType.TOWER) {
-            return RobotLevel.POWER_NODE;
+    public MapLocation senseNearestRobot(RobotController rc, MapLocation myLoc, RobotType robotType, Team team) throws GameActionException {
+        Robot[] robotsAround = rc.senseNearbyGameObjects(Robot.class);
+        int minDistance = 999999;
+        MapLocation minLoc = null;
+        for (int i=0; i < robotsAround.length; i++) {
+            Robot r = robotsAround[i];
+            if (r.getTeam() == team) {
+                RobotInfo rInfo = rc.senseRobotInfo(r);
+                if (robotType != null && rInfo.type != robotType) {
+                    continue;
+                }
+                int rDist = Info.distance(myLoc, rInfo.location);
+                if (rDist < minDistance) {
+                    minDistance = rDist;
+                    minLoc = rInfo.location;
+                }
+            }
         }
-        return RobotLevel.ON_GROUND;
+        return minLoc;
     }
 }

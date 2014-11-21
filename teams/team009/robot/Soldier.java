@@ -47,12 +47,23 @@ public class Soldier extends Manager {
         if (rc.getFlux() < rc.getType().moveCost * 10.0) {
             return;
         }
-        if (this.moveHome(rc)) {
+        if (this.followArchon(rc)) {
             return;
         }
         if (this.moveToCapturePoint(rc)) {
             return;
         }
+        if (this.moveHome(rc)) {
+            return;
+        }
+    }
+
+    private boolean followArchon(RobotController rc) throws GameActionException {
+        MapLocation nearest = this.info.senseNearestRobot(rc, this.myLoc, RobotType.ARCHON, this.info.myTeam);
+        if (nearest != null) {
+            return Move.moveTo(rc, this.myLoc, nearest, this.myDir, 3);
+        }
+        return false;
     }
 
     private boolean moveToCapturePoint(RobotController rc) throws GameActionException {
