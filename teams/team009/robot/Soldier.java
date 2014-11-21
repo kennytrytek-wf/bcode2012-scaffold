@@ -61,7 +61,11 @@ public class Soldier extends Manager {
     private boolean followArchon(RobotController rc) throws GameActionException {
         MapLocation nearest = this.info.senseNearestRobot(rc, this.myLoc, RobotType.ARCHON, this.info.myTeam);
         if (nearest != null) {
-            return Move.moveTo(rc, this.myLoc, nearest, this.myDir, 3);
+            int followDistance = 3;
+            if (rc.getFlux() < 10) {
+                followDistance = 0;
+            }
+            return Move.moveTo(rc, this.myLoc, nearest, this.myDir, followDistance);
         }
         return false;
     }

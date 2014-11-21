@@ -42,10 +42,10 @@ public class Archon extends Manager {
         if (rc.isMovementActive()) {
             return;
         }
-        if (this.capture(rc)) {
+        if (!transferFlux(rc)) {
             return;
         }
-        if (!transferFlux(rc)) {
+        if (this.capture(rc)) {
             return;
         }
         if (this.spawn(rc)) {
