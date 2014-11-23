@@ -141,29 +141,16 @@ public class Archon extends Manager {
             return false;
         }
         //check the right for a wall. If can move right, do it
-        Direction dir = null;
-        if (this.stuckTurnLeft) {
-            dir = this.myDir.rotateRight();
-        } else {
-            dir = this.myDir.rotateLeft();
-        }
-        if (rc.senseTerrainTile(this.myLoc.add(dir)) == TerrainTile.LAND) {
-            if (Move.canMove(rc, dir)) {
-                rc.setIndicatorString(1, "Nothing on the right. Setting dir to " + dir + ". Stuck dir: " + this.stuckDir);
-                Move.setDirection(rc, dir);
-            } else {
-                rc.setIndicatorString(1, "Nothing on right, but can't move. Waiting...");
-            }
+        Direction dir = this.stuckTurnLeft ? this.myDir.rotateRight() : this.myDir.rotateLeft();
+        if (Move.canMove(rc, dir)) {
+            rc.setIndicatorString(1, "Nothing on the right. Setting dir to " + dir + ". Stuck dir: " + this.stuckDir);
+            Move.setDirection(rc, dir);
             return true;
         }
         //move straight ahead. If can't move, turn left.
-        if (rc.senseTerrainTile(this.nextLoc) == TerrainTile.LAND) {
-            if (Move.canMove(rc, this.myDir)) {
-                rc.setIndicatorString(1, "Can move straight ahead. Moving...");
-                rc.moveForward();
-            } else {
-                rc.setIndicatorString(1, "Nothing straight ahead, but can't move. Waiting...");
-            }
+        if (Move.canMove(rc, this.myDir)) {
+            rc.setIndicatorString(1, "Can move straight ahead. Moving...");
+            rc.moveForward();
             return true;
         } else {
             rc.setIndicatorString(1, "Can't move ahead. Setting dir to " + this.myDir.rotateLeft() + ". Stuck dir: " + this.stuckDir);
