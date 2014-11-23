@@ -1,6 +1,6 @@
 package team009.robot;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 
 import battlecode.common.Direction;
@@ -43,7 +43,7 @@ public class Soldier extends Manager {
         if (this.attack(rc)) {
             return;
         }
-        if (rc.getFlux() < rc.getType().moveCost * 10.0) {
+        if (rc.getFlux() < RobotType.SOLDIER.moveCost) {
             return;
         }
         if (this.followArchon(rc)) {
@@ -63,6 +63,10 @@ public class Soldier extends Manager {
             int followDistance = 2;
             if (rc.getFlux() < 10) {
                 followDistance = 0;
+            }
+            if (Arrays.asList(this.info.allNodes).indexOf(this.myLoc) >= 0) {
+                Direction somewhereElse = Move.getSpawnDirection(rc, this.myDir);
+                return Move.moveTo(rc, this.myLoc, this.myLoc.add(somewhereElse), this.myDir, 0);
             }
             return Move.moveTo(rc, this.myLoc, nearest, this.myDir, followDistance);
         }

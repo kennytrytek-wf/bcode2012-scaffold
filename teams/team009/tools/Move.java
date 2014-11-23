@@ -54,4 +54,15 @@ public class Move {
         }
         return false;
     }
+
+    public static Direction getSpawnDirection(RobotController rc, Direction myDir) throws GameActionException {
+        Direction curDir = myDir;
+        do {
+            if (Move.canMove(rc, curDir)) {
+                return curDir;
+            }
+            curDir = curDir.rotateRight();
+        } while (curDir != myDir);
+        return null;
+    }
 }

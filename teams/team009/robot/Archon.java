@@ -64,19 +64,10 @@ public class Archon extends Manager {
         if (this.getUnstuck(rc)) {
             return;
         }
+        if (this.buildEntourage(rc)) {
+            return;
+        }
         if (this.capture(rc)) {
-            return;
-        }
-        if (this.spawn(rc)) {
-            return;
-        }
-        if (rc.getFlux() < rc.getType().moveCost * 10.0) {
-            return;
-        }
-        if (this.moveToCapturePoint(rc)) {
-            return;
-        }
-        if (this.moveHome(rc)) {
             return;
         }
     }
@@ -158,6 +149,31 @@ public class Archon extends Manager {
         }
     }
 
+    private boolean buildEntourage(RobotController rc) throws GameActionException {
+        //Check around me for two soldiers and one scout
+        int numSoldiers = 0;
+        int numScouts = 0;
+        Robot[] robotsAround = rc.senseNearbyGameObjects(Robot.class);
+        for (int i=0; i < robotsAround.length; i++) {
+            Robot r = robotsAround[i];
+            if (r.getTeam() == this.info.myTeam) {
+                RobotInfo rInfo = rc.senseRobotInfo(r);
+                if (rInfo.type == RobotType.SOLDIER) {
+                    numSoldiers += 1;
+                } else if (rInfo.type == RobotType.SCOUT) {
+                    numScouts += 1;
+                }
+            }
+        }
+        //If need something, make it
+        if (numSoldiers < 2) {
+            return this.spawn(rc, RobotType.SOLDIER);
+        } else if (numScouts < 1) {
+            return this.spawn(rc, RobotType.SCOUT);
+        }
+        return false;
+    }
+
     private boolean transferFlux(RobotController rc) throws GameActionException {
         double totalFlux = rc.getFlux();
         Robot[] robotsAround = rc.senseNearbyGameObjects(Robot.class);
@@ -176,27 +192,14 @@ public class Archon extends Manager {
             }
             if (rInfo.flux < 10) {
                 //rc.setIndicatorString(0, "Wanted flux: " + rInfo.flux + "; My total flux: " + totalFlux + "; Transfer to : " + rLoc);
-                if (totalFlux < 20) {
+                if (totalFlux < 40) {
                     return false;
                 }
-                rc.transferFlux(rLoc, r.getRobotLevel(), 20.0);
-                totalFlux -= 20;
+                rc.transferFlux(rLoc, r.getRobotLevel(), 40.0);
+                totalFlux -= 40;
             }
         }
         return true;
-    }
-
-    private MapLocation[] plotCourseAroundWalls(RobotController rc) throws GameActionException {
-        if (this.previousLocs.length == 5) {
-            MapLocation[] backtrack = {
-                this.previousLocs[4],
-                this.previousLocs[3],
-                this.info.myCore
-            };
-            return backtrack;
-        }
-        MapLocation[] backtrack = {this.info.myCore};
-        return backtrack;
     }
 
     private boolean spawn(RobotController rc) throws GameActionException {
@@ -205,25 +208,16 @@ public class Archon extends Manager {
 
     private boolean spawn(RobotController rc, RobotType type) throws GameActionException {
         if (rc.getFlux() > type.spawnCost) {
-            if (Move.canMove(rc, this.myDir)) {
+            Direction spawnDirection = Move.getSpawnDirection(rc, this.myDir);
+            if (spawnDirection == this.myDir) {
                 rc.spawn(type);
+                return true;
+            } else if (spawnDirection != null) {
+                Move.setDirection(rc, spawnDirection);
                 return true;
             }
         }
         return false;
-    }
-
-    private RobotType getSpawnType(RobotController rc) throws GameActionException {
-        if (rc.getFlux() > RobotType.SOLDIER.spawnCost) {
-            if (Move.canMove(rc, this.myDir)) {
-                return RobotType.SOLDIER;
-            }
-        }
-        return null;
-    }
-
-    private boolean moveHome(RobotController rc) throws GameActionException {
-        return Move.moveTo(rc, this.myLoc, this.info.myCore, this.myDir);
     }
 
     private boolean moveToCapturePoint(RobotController rc) throws GameActionException {
