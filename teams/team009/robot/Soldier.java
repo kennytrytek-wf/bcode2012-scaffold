@@ -23,7 +23,6 @@ public class Soldier extends Manager {
     MapLocation nextLoc;
 
     public Soldier(RobotController rc) throws GameActionException {
-        rc.setIndicatorString(0, "Initializing...");
         this.info = new Info(rc);
         this.myDir = null;
         this.myLoc = null;
@@ -61,7 +60,7 @@ public class Soldier extends Manager {
     private boolean followArchon(RobotController rc) throws GameActionException {
         MapLocation nearest = this.info.senseNearestRobot(rc, this.myLoc, RobotType.ARCHON, this.info.myTeam);
         if (nearest != null) {
-            int followDistance = 3;
+            int followDistance = 2;
             if (rc.getFlux() < 10) {
                 followDistance = 0;
             }

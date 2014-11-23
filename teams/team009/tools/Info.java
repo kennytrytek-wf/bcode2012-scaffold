@@ -1,6 +1,7 @@
 package team009.tools;
 
 import java.lang.Class;
+import java.util.Arrays;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
@@ -13,9 +14,13 @@ import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
 import battlecode.common.Team;
 
+import team009.common.EnumeratedMapLocation;
+import team009.common.EnumeratedMapLocationComparator;
+
 public class Info {
     public static int round;
     public static MapLocation[] allNodes;
+    public static MapLocation[] sortedNodes;
     public static MapLocation enemyCore;
     public static MapLocation myCore;
     public static Team myTeam;
@@ -28,6 +33,7 @@ public class Info {
         this.myCore = rc.sensePowerCore().getLocation();
         this.myTeam = rc.getTeam();
         this.opponent = this.myTeam.opponent();
+        this.sortedNodes = this.sortLocs(rc, this.allNodes, this.myCore);
     }
 
     public void update(RobotController rc) {
@@ -75,5 +81,20 @@ public class Info {
             }
         }
         return minLoc;
+    }
+
+    public MapLocation[] sortLocs(RobotController rc, MapLocation[] locs, MapLocation myLoc) {
+        EnumeratedMapLocation[] enumerated = new EnumeratedMapLocation[locs.length];
+        for (int i=0; i < locs.length; i++) {
+            MapLocation loc = locs[i];
+            int distance = Info.distance(myLoc, loc);
+            enumerated[i] = new EnumeratedMapLocation(loc, distance);
+        }
+        Arrays.sort(enumerated, new EnumeratedMapLocationComparator());
+        MapLocation[] sorted = new MapLocation[locs.length];
+        for (int i=0; i < locs.length; i++) {
+            sorted[i] = enumerated[i].loc;
+        }
+        return sorted;
     }
 }
