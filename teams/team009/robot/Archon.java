@@ -25,31 +25,34 @@ public class Archon extends Manager {
     Direction myDir;
     MapLocation myLoc;
     MapLocation nextLoc;
-    MapLocation[] previousLocs;
+    MapLocation previousLoc;
+    int previousLocCount;
     MapLocation capPoint;
     Message[] messages;
     boolean stuck;
     Direction stuckDir;
+    boolean stuckTurnLeft;
 
     public Archon(RobotController rc) throws GameActionException {
         this.info = new Info(rc);
         this.myDir = null;
         this.myLoc = null;
         this.nextLoc = null;
-        this.previousLocs = new MapLocation[5];
+        this.previousLoc = null;
+        this.previousLocCount = 0;
         this.capPoint = this.initCapturePoint(rc);
         this.messages = new Message[0];
         this.stuck = false;
         this.stuckDir = null;
+        this.stuckTurnLeft = true;
     }
 
     public void update(RobotController rc) throws GameActionException {
         this.info.update(rc);
-        this.previousLocs = this.getPreviousLocs(rc);
         this.myDir = rc.getDirection();
         this.myLoc = rc.getLocation();
         this.nextLoc = this.myLoc.add(this.myDir);
-        rc.setIndicatorString(2, "Next Loc: " + this.nextLoc);
+        this.updatePreviousLocCount();
         this.messages = rc.getAllMessages();
         this.capPoint = this.getCapturePoint(rc);
     }
@@ -86,20 +89,20 @@ public class Archon extends Manager {
         return this.info.sortedNodes[capPointIndex % this.info.sortedNodes.length];
     }
 
+    private void updatePreviousLocCount() {
+        if (this.previousLoc == this.myLoc) {
+            this.previousLocCount += 1;
+        } else {
+            this.previousLoc = this.myLoc;
+            this.previousLocCount = 0;
+        }
+    }
+
     private MapLocation getCapturePoint(RobotController rc) throws GameActionException {
         if (Arrays.asList(this.info.allNodes).indexOf(this.capPoint) >= 0) {
             return this.capPoint;
         }
         return this.info.getClosest(this.myLoc, this.info.allNodes);
-    }
-
-    private MapLocation[] getPreviousLocs(RobotController rc) throws GameActionException {
-        MapLocation[] newPreviousLocs = new MapLocation[5];
-        for (int i=0; i < 4; i++) {
-            newPreviousLocs[i + 1] = this.previousLocs[i];
-        }
-        newPreviousLocs[0] = this.myLoc;
-        return newPreviousLocs;
     }
 
     private boolean getUnstuck(RobotController rc) throws GameActionException {
@@ -111,9 +114,24 @@ public class Archon extends Manager {
                 return false;
             }
             this.stuckDir = this.myDir;
-            Move.setDirection(rc, this.myDir.rotateLeft());
+            int distLeft = Info.distance(this.info.myCore, this.myLoc.add(this.myDir.rotateLeft()));
+            int distRight = Info.distance(this.info.myCore, this.myLoc.add(this.myDir.rotateRight()));
+            if (distLeft > distRight) {
+                Move.setDirection(rc, this.myDir.rotateLeft());
+                this.stuckTurnLeft = true;
+            } else {
+                Move.setDirection(rc, this.myDir.rotateRight());
+                this.stuckTurnLeft = false;
+            }
             rc.setIndicatorString(1, "I'm stuck! Stuck dir: " + this.stuckDir + ". New dir: " + this.myDir.rotateLeft());
             return true;
+        }
+        //if in the same place for 15 rounds, do something about it
+        if (this.previousLocCount >= 15) {
+            rc.setIndicatorString(1, "No longer stuck! Stuck in same place for 5 rounds, so try again.");
+            this.stuck = false;
+            this.stuckDir = null;
+            return false;
         }
         //if facing stuckDir, unstick
         if (this.myDir == this.stuckDir) {
@@ -123,11 +141,16 @@ public class Archon extends Manager {
             return false;
         }
         //check the right for a wall. If can move right, do it
-        Direction rightDir = this.myDir.rotateRight();
-        if (rc.senseTerrainTile(this.myLoc.add(rightDir)) == TerrainTile.LAND) {
-            if (Move.canMove(rc, rightDir)) {
-                rc.setIndicatorString(1, "Nothing on the right. Setting dir to " + rightDir + ". Stuck dir: " + this.stuckDir);
-                Move.setDirection(rc, rightDir);
+        Direction dir = null;
+        if (this.stuckTurnLeft) {
+            dir = this.myDir.rotateRight();
+        } else {
+            dir = this.myDir.rotateLeft();
+        }
+        if (rc.senseTerrainTile(this.myLoc.add(dir)) == TerrainTile.LAND) {
+            if (Move.canMove(rc, dir)) {
+                rc.setIndicatorString(1, "Nothing on the right. Setting dir to " + dir + ". Stuck dir: " + this.stuckDir);
+                Move.setDirection(rc, dir);
             } else {
                 rc.setIndicatorString(1, "Nothing on right, but can't move. Waiting...");
             }
@@ -144,7 +167,7 @@ public class Archon extends Manager {
             return true;
         } else {
             rc.setIndicatorString(1, "Can't move ahead. Setting dir to " + this.myDir.rotateLeft() + ". Stuck dir: " + this.stuckDir);
-            Move.setDirection(rc, this.myDir.rotateLeft());
+            Move.setDirection(rc, (this.stuckTurnLeft ? this.myDir.rotateLeft() : this.myDir.rotateRight()));
             return true;
         }
     }
@@ -192,11 +215,11 @@ public class Archon extends Manager {
             }
             if (rInfo.flux < 10) {
                 //rc.setIndicatorString(0, "Wanted flux: " + rInfo.flux + "; My total flux: " + totalFlux + "; Transfer to : " + rLoc);
-                if (totalFlux < 40) {
+                if (totalFlux < 20) {
                     return false;
                 }
-                rc.transferFlux(rLoc, r.getRobotLevel(), 40.0);
-                totalFlux -= 40;
+                rc.transferFlux(rLoc, r.getRobotLevel(), 20.0);
+                totalFlux -= 20;
             }
         }
         return true;

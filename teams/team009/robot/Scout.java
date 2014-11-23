@@ -46,6 +46,9 @@ public class Scout extends Manager {
         if (this.followArchon(rc)) {
             return;
         }
+        if (rc.getFlux() < RobotType.SCOUT.moveCost) {
+            return;
+        }
         if (this.moveToCapturePoint(rc)) {
             return;
         }
@@ -61,7 +64,9 @@ public class Scout extends Manager {
             if (rc.getFlux() < 10) {
                 followDistance = 0;
             }
-            return Move.moveTo(rc, this.myLoc, nearest, this.myDir, followDistance);
+            if (rc.getFlux() > RobotType.SCOUT.moveCost) {
+                return Move.moveTo(rc, this.myLoc, nearest, this.myDir, followDistance);
+            }
         }
         return false;
     }
