@@ -23,19 +23,26 @@ public class Soldier extends Manager {
     Direction myDir;
     MapLocation myLoc;
     MapLocation nextLoc;
+    MapLocation previousLoc;
+    int previousLocCount;
     Message[] messages;
+
 
     public Soldier(RobotController rc) throws GameActionException {
         this.info = new Info(rc);
         this.myDir = null;
         this.myLoc = null;
         this.nextLoc = null;
+        this.previousLoc = null;
+        this.previousLocCount = 0;
         this.messages = null;
     }
 
     public void update(RobotController rc) throws GameActionException {
         this.info.update(rc);
         this.myDir = rc.getDirection();
+        this.previousLocCount = (this.myLoc == this.previousLoc) ? this.previousLocCount + 1 : 0;
+        this.previousLoc = this.myLoc;
         this.myLoc = rc.getLocation();
         this.nextLoc = this.myLoc.add(this.myDir);
         this.messages = rc.getAllMessages();
@@ -49,6 +56,9 @@ public class Soldier extends Manager {
             return;
         }
         if (rc.getFlux() < RobotType.SOLDIER.moveCost) {
+            return;
+        }
+        if (this.getOutTheWay(rc)) {
             return;
         }
         if (this.followArchon(rc)) {
@@ -74,6 +84,20 @@ public class Soldier extends Manager {
                 followDistance = 0;
             }
             return Move.moveTo(rc, this.myLoc, nearest, this.myDir, followDistance);
+        }
+        return false;
+    }
+
+    private boolean getOutTheWay(RobotController rc) throws GameActionException {
+        if (this.previousLocCount > 50) {
+            Direction spawnDirection = Move.getSpawnDirection(rc, this.myDir);
+            if (spawnDirection == this.myDir) {
+                rc.moveForward();
+                return true;
+            } else if (spawnDirection != null) {
+                Move.setDirection(rc, spawnDirection);
+                return true;
+            }
         }
         return false;
     }
@@ -123,6 +147,9 @@ public class Soldier extends Manager {
         }
         if (minLoc == null) {
             return false;
+        }
+        if (rc.getFlux() < RobotType.SOLDIER.moveCost) {
+            return true;
         }
         if (rc.canAttackSquare(minLoc)) {
             Message msg = MessageTypes.createMessage(MessageTypes.ENEMY, new int[0], new MapLocation[]{minLoc}, null);

@@ -32,6 +32,8 @@ public class Archon extends Manager {
     boolean stuck;
     Direction stuckDir;
     boolean stuckTurnLeft;
+    int stuckRounds;
+    Random random;
 
     public Archon(RobotController rc) throws GameActionException {
         this.info = new Info(rc);
@@ -45,6 +47,8 @@ public class Archon extends Manager {
         this.stuck = false;
         this.stuckDir = null;
         this.stuckTurnLeft = true;
+        this.stuckRounds = 0;
+        this.random = new Random(rc.getRobot().getID());
     }
 
     public void update(RobotController rc) throws GameActionException {
@@ -55,6 +59,7 @@ public class Archon extends Manager {
         this.updatePreviousLocCount();
         this.messages = rc.getAllMessages();
         this.capPoint = this.getCapturePoint(rc);
+        this.stuckRounds += this.stuck ? 1 : 0;
     }
 
     public void move(RobotController rc) throws GameActionException {
@@ -114,9 +119,9 @@ public class Archon extends Manager {
                 return false;
             }
             this.stuckDir = this.myDir;
-            int distLeft = Info.distance(this.info.myCore, this.myLoc.add(this.myDir.rotateLeft()));
-            int distRight = Info.distance(this.info.myCore, this.myLoc.add(this.myDir.rotateRight()));
-            if (distLeft > distRight) {
+            int distLeft = Info.distance(this.capPoint, this.myLoc.add(this.myDir.rotateLeft()));
+            int distRight = Info.distance(this.capPoint, this.myLoc.add(this.myDir.rotateRight()));
+            if (distLeft < distRight) {
                 Move.setDirection(rc, this.myDir.rotateLeft());
                 this.stuckTurnLeft = true;
             } else {
@@ -127,10 +132,11 @@ public class Archon extends Manager {
             return true;
         }
         //if in the same place for 15 rounds, do something about it
-        if (this.previousLocCount >= 15) {
+        if (this.previousLocCount >= 15 || this.stuckRounds > 100) {
             rc.setIndicatorString(1, "No longer stuck! Stuck in same place for 5 rounds, so try again.");
             this.stuck = false;
             this.stuckDir = null;
+            this.stuckRounds = 0;
             return false;
         }
         //if facing stuckDir, unstick
@@ -138,6 +144,7 @@ public class Archon extends Manager {
             rc.setIndicatorString(1, "No longer stuck! Facing " + this.myDir + ", which is the same as " + this.stuckDir);
             this.stuck = false;
             this.stuckDir = null;
+            this.stuckRounds = 0;
             return false;
         }
         //check the right for a wall. If can move right, do it
@@ -230,7 +237,7 @@ public class Archon extends Manager {
                  break;
             }
         }
-        RobotType[] scaryRobots = new RobotType[]{RobotType.SOLDIER, RobotType.SCORCHER, RobotType.DISRUPTER};
+        RobotType[] scaryRobots = new RobotType[]{RobotType.ARCHON, RobotType.SOLDIER, RobotType.SCORCHER, RobotType.DISRUPTER};
         MapLocation sensedNearest = this.info.senseNearestRobot(rc, this.myLoc, scaryRobots, this.info.opponent);
         if (nearest == null) {
             nearest = sensedNearest;
@@ -239,6 +246,7 @@ public class Archon extends Manager {
         if (nearest != null) {
             this.stuck = false;
             this.stuckDir = null;
+            this.stuckRounds = 0;
             if (sensedNearest != null) {
                 Message msg = MessageTypes.createMessage(MessageTypes.ENEMY, new int[0], new MapLocation[]{sensedNearest}, null);
                 rc.broadcast(msg);
