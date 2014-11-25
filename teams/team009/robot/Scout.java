@@ -58,7 +58,7 @@ public class Scout extends Manager {
     }
 
     private boolean followArchon(RobotController rc) throws GameActionException {
-        MapLocation nearest = this.info.senseNearestRobot(rc, this.myLoc, RobotType.ARCHON, this.info.myTeam);
+        MapLocation nearest = this.info.senseNearestRobot(rc, this.myLoc, new RobotType[]{RobotType.ARCHON}, this.info.myTeam);
         if (nearest != null) {
             int followDistance = 2;
             if (rc.getFlux() < 10) {

@@ -61,7 +61,8 @@ public class Archon extends Manager {
         if (rc.isMovementActive()) {
             return;
         }
-        if (!transferFlux(rc)) {
+        this.transferFlux(rc);
+        if (this.danger(rc)) {
             return;
         }
         if (this.getUnstuck(rc)) {
@@ -79,12 +80,11 @@ public class Archon extends Manager {
         Message[] messages = rc.getAllMessages();
         int capPointIndex = 0;
         for (int i=0; i < messages.length; i++) {
-            if (messages[i].ints[0] == MessageTypes.ARCHON_CAPTURE_POINT) {
+            if (MessageTypes.getMessageType(messages[i]) == MessageTypes.ARCHON_CAPTURE_POINT) {
                 capPointIndex += 1;
             }
         }
-        Message msg = new Message();
-        msg.ints = new int[]{MessageTypes.ARCHON_CAPTURE_POINT};
+        Message msg = MessageTypes.createMessage(MessageTypes.ARCHON_CAPTURE_POINT, new int[0], null, null);
         rc.broadcast(msg);
         return this.info.sortedNodes[capPointIndex % this.info.sortedNodes.length];
     }
@@ -185,6 +185,11 @@ public class Archon extends Manager {
     }
 
     private boolean transferFlux(RobotController rc) throws GameActionException {
+        return this.transferFlux(rc, 10.0, 10.0, 35.0, 10.0);
+    }
+
+    private boolean transferFlux(RobotController rc, double myMin, double otherMin, double otherMax, double transferAmt) throws GameActionException {
+        boolean fluxTransferred = false;
         double totalFlux = rc.getFlux();
         Robot[] robotsAround = rc.senseNearbyGameObjects(Robot.class);
         for (int i=0; i < robotsAround.length; i++) {
@@ -200,20 +205,56 @@ public class Archon extends Manager {
             if (rInfo.type == RobotType.TOWER || rInfo.type == RobotType.ARCHON) {
                 continue;
             }
-            if (rInfo.flux < 10) {
-                //rc.setIndicatorString(0, "Wanted flux: " + rInfo.flux + "; My total flux: " + totalFlux + "; Transfer to : " + rLoc);
-                if (totalFlux < 20) {
+            if ((rInfo.flux < otherMin) || (rInfo.flux < otherMax)) {
+                double actualTransferAmt = transferAmt;
+                if (rInfo.flux > otherMin) {
+                    actualTransferAmt = otherMax - rInfo.flux;
+                }
+                if (totalFlux < actualTransferAmt) {
                     return false;
                 }
-                rc.transferFlux(rLoc, r.getRobotLevel(), 20.0);
-                totalFlux -= 20;
+                rc.transferFlux(rLoc, r.getRobotLevel(), actualTransferAmt);
+                totalFlux -= actualTransferAmt;
+                fluxTransferred = true;
             }
         }
-        return true;
+        return fluxTransferred;
     }
 
-    private boolean spawn(RobotController rc) throws GameActionException {
-        return this.spawn(rc, RobotType.SOLDIER);
+    private boolean danger(RobotController rc) throws GameActionException {
+        MapLocation nearest = null;
+        for (int i=0; i < this.messages.length; i++) {
+            Message msg = this.messages[i];
+            if (MessageTypes.getMessageType(msg) == MessageTypes.ENEMY) {
+                nearest = msg.locations[0];
+                 break;
+            }
+        }
+        RobotType[] scaryRobots = new RobotType[]{RobotType.SOLDIER, RobotType.SCORCHER, RobotType.DISRUPTER};
+        MapLocation sensedNearest = this.info.senseNearestRobot(rc, this.myLoc, scaryRobots, this.info.opponent);
+        if (nearest == null) {
+            nearest = sensedNearest;
+        }
+        MapLocation closestFriend = this.info.senseNearestRobot(rc, this.myLoc, new RobotType[]{RobotType.SOLDIER}, this.info.myTeam);
+        if (nearest != null) {
+            this.stuck = false;
+            this.stuckDir = null;
+            if (sensedNearest != null) {
+                Message msg = MessageTypes.createMessage(MessageTypes.ENEMY, new int[0], new MapLocation[]{sensedNearest}, null);
+                rc.broadcast(msg);
+            }
+            if ((closestFriend == null) || (Info.distance(this.myLoc, nearest) < 3)) {
+                Direction runAwayDir = this.myLoc.directionTo(nearest).opposite();
+                return Move.moveTo(rc, this.myLoc, this.myLoc.add(runAwayDir), this.myDir, 0);
+            } else {
+                if ((closestFriend != null) && (Info.distance(this.myLoc, closestFriend) > 1)) {
+                    return Move.moveTo(rc, this.myLoc, closestFriend, this.myDir, 1);
+                } else if (this.spawn(rc, RobotType.SOLDIER)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean spawn(RobotController rc, RobotType type) throws GameActionException {

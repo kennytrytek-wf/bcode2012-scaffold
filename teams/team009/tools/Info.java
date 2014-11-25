@@ -2,6 +2,7 @@ package team009.tools;
 
 import java.lang.Class;
 import java.util.Arrays;
+import java.util.List;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
@@ -62,7 +63,8 @@ public class Info {
         return minLoc;
     }
 
-    public MapLocation senseNearestRobot(RobotController rc, MapLocation myLoc, RobotType robotType, Team team) throws GameActionException {
+    public MapLocation senseNearestRobot(RobotController rc, MapLocation myLoc, RobotType[] robotTypes, Team team) throws GameActionException {
+        List<RobotType> typeList = robotTypes == null ? null : Arrays.asList(robotTypes);
         Robot[] robotsAround = rc.senseNearbyGameObjects(Robot.class);
         int minDistance = 999999;
         MapLocation minLoc = null;
@@ -70,7 +72,7 @@ public class Info {
             Robot r = robotsAround[i];
             if (r.getTeam() == team) {
                 RobotInfo rInfo = rc.senseRobotInfo(r);
-                if (robotType != null && rInfo.type != robotType) {
+                if (typeList != null && typeList.indexOf(rInfo.type) < 0) {
                     continue;
                 }
                 int rDist = Info.distance(myLoc, rInfo.location);
