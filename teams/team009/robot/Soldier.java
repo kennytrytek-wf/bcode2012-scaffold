@@ -75,7 +75,9 @@ public class Soldier extends Manager {
     private boolean followArchon(RobotController rc) throws GameActionException {
         if (Arrays.asList(this.info.allNodes).indexOf(this.myLoc) >= 0) {
             Direction somewhereElse = Move.getSpawnDirection(rc, this.myDir);
-            return Move.moveTo(rc, this.myLoc, this.myLoc.add(somewhereElse), this.myDir, 0);
+            if (somewhereElse != null) {
+                return Move.moveTo(rc, this.myLoc, this.myLoc.add(somewhereElse), this.myDir, 0);
+            }
         }
         MapLocation nearest = this.info.senseNearestRobot(rc, this.myLoc, new RobotType[]{RobotType.ARCHON}, this.info.myTeam);
         if (nearest != null) {

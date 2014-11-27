@@ -49,6 +49,9 @@ public class Scout extends Manager {
         if (rc.getFlux() < RobotType.SCOUT.moveCost) {
             return;
         }
+        if (this.danger(rc)) {
+            return;
+        }
         if (this.moveToCapturePoint(rc)) {
             return;
         }
@@ -66,6 +69,18 @@ public class Scout extends Manager {
             }
             if (rc.getFlux() > RobotType.SCOUT.moveCost) {
                 return Move.moveTo(rc, this.myLoc, nearest, this.myDir, followDistance);
+            }
+        }
+        return false;
+    }
+
+    private boolean danger(RobotController rc) throws GameActionException {
+        RobotType[] scaryRobots = new RobotType[]{RobotType.ARCHON, RobotType.SOLDIER, RobotType.SCORCHER, RobotType.DISRUPTER};
+        MapLocation nearestEnemy = this.info.senseNearestRobot(rc, this.myLoc, scaryRobots, this.info.opponent);
+        if (nearestEnemy != null) {
+            if (Info.distance(this.myLoc, nearestEnemy) < 3) {
+                Direction runAwayDir = this.myLoc.directionTo(nearestEnemy).opposite();
+                return Move.moveTo(rc, this.myLoc, this.myLoc.add(runAwayDir), this.myDir, 0);
             }
         }
         return false;

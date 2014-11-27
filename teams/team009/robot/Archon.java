@@ -8,6 +8,7 @@ import battlecode.common.GameActionException;
 import battlecode.common.GameObject;
 import battlecode.common.MapLocation;
 import battlecode.common.Message;
+import battlecode.common.PowerNode;
 import battlecode.common.Robot;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
@@ -107,7 +108,19 @@ public class Archon extends Manager {
         if (Arrays.asList(this.info.allNodes).indexOf(this.capPoint) >= 0) {
             return this.capPoint;
         }
-        return this.info.getClosest(this.myLoc, this.info.allNodes);
+        PowerNode pc = rc.sensePowerCore();
+        MapLocation[] pcNeighbors = pc.neighbors();
+        PowerNode[] allied = rc.senseAlliedPowerNodes();
+        MapLocation[] alliedLocs = new MapLocation[allied.length];
+        for (int i=0; i < allied.length; i++) {
+            alliedLocs[i] = allied[i].getLocation();
+        }
+        for (int i=0; i < pcNeighbors.length; i++) {
+            if (Arrays.asList(alliedLocs).indexOf(pcNeighbors[i]) < 0) {
+                return pcNeighbors[i];
+            }
+        }
+        return this.info.getClosest(this.capPoint, this.info.allNodes);
     }
 
     private boolean getUnstuck(RobotController rc) throws GameActionException {
@@ -132,7 +145,7 @@ public class Archon extends Manager {
             return true;
         }
         //if in the same place for 15 rounds, do something about it
-        if (this.previousLocCount >= 15 || this.stuckRounds > 100) {
+        if (this.previousLocCount >= 15) {
             rc.setIndicatorString(1, "No longer stuck! Stuck in same place for 5 rounds, so try again.");
             this.stuck = false;
             this.stuckDir = null;
@@ -140,7 +153,7 @@ public class Archon extends Manager {
             return false;
         }
         //if facing stuckDir, unstick
-        if (this.myDir == this.stuckDir) {
+        if ((this.myDir == this.stuckDir) && Move.canMove(rc, this.myDir)) {
             rc.setIndicatorString(1, "No longer stuck! Facing " + this.myDir + ", which is the same as " + this.stuckDir);
             this.stuck = false;
             this.stuckDir = null;
@@ -174,11 +187,13 @@ public class Archon extends Manager {
         for (int i=0; i < robotsAround.length; i++) {
             Robot r = robotsAround[i];
             if (r.getTeam() == this.info.myTeam) {
-                RobotInfo rInfo = rc.senseRobotInfo(r);
-                if (rInfo.type == RobotType.SOLDIER) {
-                    numSoldiers += 1;
-                } else if (rInfo.type == RobotType.SCOUT) {
-                    numScouts += 1;
+                if (rc.canSenseObject(r)) {
+                    RobotInfo rInfo = rc.senseRobotInfo(r);
+                    if (rInfo.type == RobotType.SOLDIER) {
+                        numSoldiers += 1;
+                    } else if (rInfo.type == RobotType.SCOUT) {
+                        numScouts += 1;
+                    }
                 }
             }
         }
@@ -292,6 +307,12 @@ public class Archon extends Manager {
                 Move.setDirection(rc, toCapPoint);
             }
             return true;
+        }
+        if (this.myLoc == this.capPoint) {
+            Direction somewhereElse = Move.getSpawnDirection(rc, this.myDir);
+            if (somewhereElse != null) {
+                return Move.moveTo(rc, this.myLoc, this.myLoc.add(somewhereElse), this.myDir, 0);
+            }
         }
         return this.moveToCapturePoint(rc);
     }
