@@ -35,6 +35,7 @@ public class Archon extends Manager {
     boolean stuckTurnLeft;
     int stuckRounds;
     Random random;
+    int archonNumber;
 
     public Archon(RobotController rc) throws GameActionException {
         this.info = new Info(rc);
@@ -92,7 +93,9 @@ public class Archon extends Manager {
         }
         Message msg = MessageTypes.createMessage(MessageTypes.ARCHON_CAPTURE_POINT, new int[0], null, null);
         rc.broadcast(msg);
-        return this.info.sortedNodes[capPointIndex % this.info.sortedNodes.length];
+        this.archonNumber = capPointIndex;
+        MapLocation capPoint = this.info.sortedNodes[capPointIndex % this.info.sortedNodes.length];
+        return capPoint;
     }
 
     private void updatePreviousLocCount() {
@@ -120,7 +123,9 @@ public class Archon extends Manager {
                 return pcNeighbors[i];
             }
         }
-        return this.info.getClosest(this.capPoint, this.info.allNodes);
+        MapLocation[] sortedNodes = this.info.sortLocs(rc, this.info.allNodes, this.info.myCore);
+        MapLocation capPoint = sortedNodes[this.archonNumber % this.info.allNodes.length];
+        return capPoint;
     }
 
     private boolean getUnstuck(RobotController rc) throws GameActionException {
@@ -180,6 +185,15 @@ public class Archon extends Manager {
     }
 
     private boolean buildEntourage(RobotController rc) throws GameActionException {
+        if (rc.getFlux() > 299.0) {
+            return this.spawn(rc, RobotType.SOLDIER);
+        }
+        //If getting a high-priority node, just get it
+        PowerNode pc = rc.sensePowerCore();
+        MapLocation[] pcNeighbors = pc.neighbors();
+        if (Arrays.asList(pcNeighbors).indexOf(this.capPoint) >= 0) {
+            return false;
+        }
         //Check around me for two soldiers and one scout
         int numSoldiers = 0;
         int numScouts = 0;
@@ -299,7 +313,18 @@ public class Archon extends Manager {
     }
 
     private boolean capture(RobotController rc) throws GameActionException {
+        if (this.myLoc == this.capPoint) {
+            Direction somewhereElse = Move.getSpawnDirection(rc, this.myDir);
+            if (somewhereElse != null) {
+                return Move.moveTo(rc, this.myLoc, this.myLoc.add(somewhereElse), this.myDir, 0);
+            }
+        }
         if (Info.distance(this.myLoc, this.capPoint) == 1) {
+            GameObject node = rc.senseObjectAtLocation(this.capPoint, RobotLevel.POWER_NODE);
+            rc.setIndicatorString(2, "node: " + node + ", team: " + (node == null ? null : node.getTeam()));
+            if (node.getTeam() == this.info.opponent) {
+                return this.spawn(rc, RobotType.SOLDIER);
+            }
             Direction toCapPoint = this.myLoc.directionTo(this.capPoint);
             if (this.myDir == toCapPoint) {
                 this.spawn(rc, RobotType.TOWER);
@@ -307,12 +332,6 @@ public class Archon extends Manager {
                 Move.setDirection(rc, toCapPoint);
             }
             return true;
-        }
-        if (this.myLoc == this.capPoint) {
-            Direction somewhereElse = Move.getSpawnDirection(rc, this.myDir);
-            if (somewhereElse != null) {
-                return Move.moveTo(rc, this.myLoc, this.myLoc.add(somewhereElse), this.myDir, 0);
-            }
         }
         return this.moveToCapturePoint(rc);
     }
