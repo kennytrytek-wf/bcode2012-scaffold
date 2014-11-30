@@ -185,7 +185,7 @@ public class Archon extends Manager {
     }
 
     private boolean buildEntourage(RobotController rc) throws GameActionException {
-        if (rc.getFlux() > 299.0) {
+        if (rc.getFlux() > 285.0) {
             return this.spawn(rc, RobotType.SOLDIER);
         }
         //If getting a high-priority node, just get it

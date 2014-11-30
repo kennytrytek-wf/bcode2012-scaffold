@@ -10,6 +10,7 @@ import battlecode.common.MapLocation;
 import battlecode.common.Message;
 import battlecode.common.Robot;
 import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
 import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
 
@@ -131,18 +132,28 @@ public class Soldier extends Manager {
         }
         MapLocation minLoc = dangerLoc;
         RobotLevel minLevel = RobotLevel.ON_GROUND;
+        boolean isArchon = false;
         if (dangerBot == null) {
             Robot[] robotsAround = rc.senseNearbyGameObjects(Robot.class);
             int minDistance = 999999;
             for (int i=0; i < robotsAround.length; i++) {
                 Robot r = robotsAround[i];
                 if (r.getTeam() != this.info.myTeam) {
-                    MapLocation rLoc = rc.senseLocationOf(r);
-                    int rDist = Info.distance(this.myLoc, rLoc);
-                    if (rDist < minDistance) {
-                        minDistance = rDist;
-                        minLoc = rLoc;
-                        minLevel = r.getRobotLevel();
+                    RobotInfo rInfo = rc.senseRobotInfo(r);
+                    if (rInfo.type == RobotType.ARCHON) {
+                        isArchon = true;
+                    } else if (rInfo.type == RobotType.TOWER) {
+                        if (Arrays.asList(this.info.allNodes).indexOf(rInfo.location) < 0) {
+                            continue;
+                        }
+                    }
+                    if (!isArchon || (isArchon && rInfo.type == RobotType.ARCHON)) {
+                        int rDist = Info.distance(this.myLoc, rInfo.location);
+                        if (rDist < minDistance) {
+                            minDistance = rDist;
+                            minLoc = rInfo.location;
+                            minLevel = r.getRobotLevel();
+                        }
                     }
                 }
             }
