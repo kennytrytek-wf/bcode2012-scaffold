@@ -27,6 +27,7 @@ public class Soldier extends Manager {
     MapLocation previousLoc;
     int previousLocCount;
     Message[] messages;
+    MapLocation[] archonLocs;
 
 
     public Soldier(RobotController rc) throws GameActionException {
@@ -37,6 +38,7 @@ public class Soldier extends Manager {
         this.previousLoc = null;
         this.previousLocCount = 0;
         this.messages = null;
+        this.archonLocs = new MapLocation[0];
     }
 
     public void update(RobotController rc) throws GameActionException {
@@ -47,6 +49,7 @@ public class Soldier extends Manager {
         this.myLoc = rc.getLocation();
         this.nextLoc = this.myLoc.add(this.myDir);
         this.messages = rc.getAllMessages();
+        this.archonLocs = this.updateArchonLocs(rc);
     }
 
     public void move(RobotController rc) throws GameActionException {
@@ -73,6 +76,17 @@ public class Soldier extends Manager {
         }
     }
 
+    private MapLocation[] updateArchonLocs(RobotController rc) throws GameActionException {
+        MapLocation nearest = this.info.senseNearestRobot(rc, this.myLoc, new RobotType[]{RobotType.ARCHON}, this.info.myTeam);
+        if ((nearest != null) && (Arrays.asList(this.archonLocs).indexOf(nearest) != 0)) {
+            if (this.archonLocs.length < 3) {
+                return new MapLocation[]{nearest, nearest, nearest};
+            }
+            return new MapLocation[]{nearest, this.archonLocs[0], this.archonLocs[1]};
+        }
+        return this.archonLocs;
+    }
+
     private boolean followArchon(RobotController rc) throws GameActionException {
         if (Arrays.asList(this.info.allNodes).indexOf(this.myLoc) >= 0) {
             Direction somewhereElse = Move.getSpawnDirection(rc, this.myDir);
@@ -82,11 +96,7 @@ public class Soldier extends Manager {
         }
         MapLocation nearest = this.info.senseNearestRobot(rc, this.myLoc, new RobotType[]{RobotType.ARCHON}, this.info.myTeam);
         if (nearest != null) {
-            int followDistance = 2;
-            if (rc.getFlux() < 10) {
-                followDistance = 0;
-            }
-            return Move.moveTo(rc, this.myLoc, nearest, this.myDir, followDistance);
+            return Move.moveTo(rc, this.myLoc, nearest, this.myDir, 0);
         }
         return false;
     }

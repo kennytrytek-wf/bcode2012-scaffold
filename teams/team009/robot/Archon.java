@@ -128,6 +128,20 @@ public class Archon extends Manager {
         return capPoint;
     }
 
+    private boolean getOutTheWay(RobotController rc) throws GameActionException {
+        if (this.previousLocCount > 50) {
+            Direction spawnDirection = Move.getSpawnDirection(rc, this.myDir);
+            if (spawnDirection == this.myDir) {
+                rc.moveForward();
+                return true;
+            } else if (spawnDirection != null) {
+                Move.setDirection(rc, spawnDirection);
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean getUnstuck(RobotController rc) throws GameActionException {
         rc.setIndicatorString(0, "Stuck: " + this.stuck);
         if (!this.stuck) {
@@ -172,6 +186,10 @@ public class Archon extends Manager {
             Move.setDirection(rc, dir);
             return true;
         }
+        //If straight ahead is off the map, change turnDir to opposite
+        if (rc.senseTerrainTile(this.nextLoc) == TerrainTile.OFF_MAP) {
+            this.stuckTurnLeft = !this.stuckTurnLeft;
+        }
         //move straight ahead. If can't move, turn left.
         if (Move.canMove(rc, this.myDir)) {
             rc.setIndicatorString(1, "Can move straight ahead. Moving...");
@@ -185,18 +203,16 @@ public class Archon extends Manager {
     }
 
     private boolean buildEntourage(RobotController rc) throws GameActionException {
-        if (rc.getFlux() > 285.0) {
-            return this.spawn(rc, RobotType.SOLDIER);
-        }
         //If getting a high-priority node, just get it
         PowerNode pc = rc.sensePowerCore();
         MapLocation[] pcNeighbors = pc.neighbors();
         if (Arrays.asList(pcNeighbors).indexOf(this.capPoint) >= 0) {
             return false;
         }
-        //Check around me for two soldiers and one scout
+        //Check around me for two soldiers, one scout, and a scorcher
         int numSoldiers = 0;
         int numScouts = 0;
+        int numScorchers = 0;
         Robot[] robotsAround = rc.senseNearbyGameObjects(Robot.class);
         for (int i=0; i < robotsAround.length; i++) {
             Robot r = robotsAround[i];
@@ -207,6 +223,8 @@ public class Archon extends Manager {
                         numSoldiers += 1;
                     } else if (rInfo.type == RobotType.SCOUT) {
                         numScouts += 1;
+                    } else if (rInfo.type == RobotType.SCORCHER) {
+                        numScorchers += 1;
                     }
                 }
             }
@@ -216,6 +234,11 @@ public class Archon extends Manager {
             return this.spawn(rc, RobotType.SOLDIER);
         } else if (numScouts < 1) {
             return this.spawn(rc, RobotType.SCOUT);
+        } else if (numScorchers < 1) {
+            return this.spawn(rc, RobotType.SCORCHER);
+        }
+        if (rc.getFlux() > 285.0) {
+            return this.spawn(rc, RobotType.SOLDIER);
         }
         return false;
     }
@@ -314,10 +337,7 @@ public class Archon extends Manager {
 
     private boolean capture(RobotController rc) throws GameActionException {
         if (this.myLoc == this.capPoint) {
-            Direction somewhereElse = Move.getSpawnDirection(rc, this.myDir);
-            if (somewhereElse != null) {
-                return Move.moveTo(rc, this.myLoc, this.myLoc.add(somewhereElse), this.myDir, 0);
-            }
+            return this.getOutTheWay(rc);
         }
         if (Info.distance(this.myLoc, this.capPoint) == 1) {
             GameObject node = rc.senseObjectAtLocation(this.capPoint, RobotLevel.POWER_NODE);
